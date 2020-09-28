@@ -1,7 +1,7 @@
 # Go-str
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/boyter/str)](https://goreportcard.com/report/github.com/boyter/str)
-[![Str Count Badge](https://sloc.xyz/github/boyter/str/)](https://github.com/boyter/str/)
+[![Go Report Card](https://goreportcard.com/badge/github.com/boyter/go-string)](https://goreportcard.com/report/github.com/boyter/go-string)
+[![Str Count Badge](https://sloc.xyz/github/boyter/go-string/)](https://github.com/boyter/go-string/)
 
 Useful string utility functions for Go projects. 
 
