@@ -3,7 +3,9 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/boyter/go-string)](https://goreportcard.com/report/github.com/boyter/go-string)
 [![Str Count Badge](https://sloc.xyz/github/boyter/go-string/)](https://github.com/boyter/go-string/)
 
-Useful string utility functions for Go projects. 
+Useful string utility functions for Go projects. Either because they are faster than the common Go version or not included.
+
+
 
 All code is dual-licenced as either MIT or Unlicence. 
 
