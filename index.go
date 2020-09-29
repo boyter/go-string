@@ -9,7 +9,7 @@ import (
 	"unicode/utf8"
 )
 
-// IndexAll extracts all of the locations of a str inside another str
+// IndexAll extracts all of the locations of a string inside another string
 // up-to the defined limit and does so without regular expressions
 // which makes it faster than FindAllIndex in most situations while
 // not being any slower. It performs worst when working against random
@@ -70,7 +70,7 @@ func IndexAll(haystack string, needle string, limit int) [][]int {
 		// We need to keep the offset of the match so we continue searching
 		offSet += loc + len(needle)
 
-		// strings.Index does checks of if the str is empty so we don't need
+		// strings.Index does checks of if the string is empty so we don't need
 		// to explicitly do it ourselves
 		loc = strings.Index(searchText, needle)
 	}
@@ -95,9 +95,9 @@ var _permuteCacheLock = sync.Mutex{}
 // can improve performance if doing the same searches over and over
 var CacheSize = 10
 
-// IndexAllIgnoreCase extracts all of the locations of a str inside another str
+// IndexAllIgnoreCase extracts all of the locations of a string inside another string
 // up-to the defined limit. It is designed to be faster than uses of FindAllIndex with
-// case insensitive matching enabled, by looking for str literals first and then
+// case insensitive matching enabled, by looking for string literals first and then
 // checking for exact matches. It also does so in a unicode aware way such that a search
 // for S will search for S s and ſ which a simple strings.ToLower over the haystack
 // and the needle will not.
