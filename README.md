@@ -12,7 +12,7 @@ Probably the most useful methods are IndexAll and IndexAllIgnoreCase which for s
 Some quick benchmarks using a simple program which opens a 550MB file and searches over it in memory. 
 Each search is done three times, the first using regexp.FindAllIndex and the second using IndexAllIgnoreCase.
 
-For this specific example the wall clock time to run is at least 10x less.
+For this specific example the wall clock time to run is at least 10x less, but with the same matching results.
 
 ```
 $ ./csperf ſecret 550MB
