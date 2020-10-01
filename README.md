@@ -29,6 +29,64 @@ Scan took 2.019360935s 16680
 Scan took 1.996732171s 16680
 ```
 
+The above example in code for you to copy
+
+```
+// Simple test comparison between various search methods
+func main() {
+	arg1 := os.Args[1]
+	arg2 := os.Args[2]
+
+	b, err := ioutil.ReadFile(arg2)
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+
+	fmt.Println("File length", len(b))
+
+	haystack := string(b)
+
+	var start time.Time
+	var elapsed time.Duration
+
+	fmt.Println("\nFindAllIndex (regex)")
+	r := regexp.MustCompile(regexp.QuoteMeta(arg1))
+	for i := 0; i < 3; i++ {
+		start = time.Now()
+		all := r.FindAllIndex(b, -1)
+		elapsed = time.Since(start)
+		fmt.Println("Scan took", elapsed, len(all))
+	}
+
+	fmt.Println("\nIndexAll (custom)")
+	for i := 0; i < 3; i++ {
+		start = time.Now()
+		all := str.IndexAll(haystack, arg1, -1)
+		elapsed = time.Since(start)
+		fmt.Println("Scan took", elapsed, len(all))
+	}
+
+	r = regexp.MustCompile(`(?i)` + regexp.QuoteMeta(arg1))
+	fmt.Println("\nFindAllIndex (regex ignore case)")
+	for i := 0; i < 3; i++ {
+		start = time.Now()
+		all := r.FindAllIndex(b, -1)
+		elapsed = time.Since(start)
+		fmt.Println("Scan took", elapsed, len(all))
+	}
+
+	fmt.Println("\nIndexAllIgnoreCase (custom)")
+	for i := 0; i < 3; i++ {
+		start = time.Now()
+		all := str.IndexAllIgnoreCase(haystack, arg1, -1)
+		elapsed = time.Since(start)
+		fmt.Println("Scan took", elapsed, len(all))
+	}
+}
+
+```
+
 Note that it performs best with real documents and wost when searching over random data. Depending on what you are searching you may have a similar speed up or a marginal one.
 
 FindAllIndex has a similar speed up,
