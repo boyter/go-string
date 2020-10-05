@@ -4,6 +4,7 @@ package str
 
 import (
 	"math"
+	"sort"
 	"strings"
 	"sync"
 	"unicode/utf8"
@@ -178,10 +179,20 @@ func IndexAllIgnoreCase(haystack string, needle string, limit int) [][]int {
 		// and as such its pretty hard to beat.
 		for _, term := range searchTerms {
 			locs = append(locs, IndexAll(haystack, term, limit)...)
+		}
 
-			if limit > 0 && len(locs) > limit {
-				return locs[:limit]
-			}
+		// if the limit is not -1 we need to sort and return the first X results so we maintain compatibility with how
+		// FindAllIndex would work
+		if limit > 0 && len(locs) > limit {
+
+			// now sort the results to we can get the first X results
+			// Now rank based on which ones are the best and sort them on that rank
+			// then get the top amount and the surrounding lines
+			sort.Slice(locs, func(i, j int) bool {
+				return locs[i][0] < locs[j][0]
+			})
+
+			return locs[:limit]
 		}
 	} else {
 		// Over the character limit so look for potential matches and only then check to find real ones
@@ -266,13 +277,23 @@ func IndexAllIgnoreCase(haystack string, needle string, limit int) [][]int {
 					// but adjust the positions to the match and the length of the
 					// needle to ensure the byte count lines up
 					locs = append(locs, []int{match[0], match[0] + len(string(toMatch))})
-
-					if limit > 0 && len(locs) > limit {
-						return locs[:limit]
-					}
 				}
 
 			}
+		}
+
+		// if the limit is not -1 we need to sort and return the first X results so we maintain compatibility with how
+		// FindAllIndex would work
+		if limit > 0 && len(locs) > limit {
+
+			// now sort the results to we can get the first X results
+			// Now rank based on which ones are the best and sort them on that rank
+			// then get the top amount and the surrounding lines
+			sort.Slice(locs, func(i, j int) bool {
+				return locs[i][0] < locs[j][0]
+			})
+
+			return locs[:limit]
 		}
 	}
 
