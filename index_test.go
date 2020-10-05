@@ -263,3 +263,39 @@ func TestIndexAllIgnoreCasePerformanceCase(t *testing.T) {
 		t.Error("Should be faster than this... don't think you are, know you are. Ran in (ms)", end-start)
 	}
 }
+
+// When we limit we want the searches to be in order in order to match what FindAllIndex would do
+// as closely as possible
+func TestIndexAllIgnoreCaseLimitSmallNeedle(t *testing.T) {
+	matches := IndexAllIgnoreCase("Test TEST test tEST", "te", 2)
+
+	if len(matches) != 2 {
+		t.Error("Expected two matches")
+	}
+
+	if matches[0][0] != 0 {
+		t.Error("expected 0 got", matches[0][0])
+	}
+
+	if matches[1][0] != 5 {
+		t.Error("expected 5 got", matches[1][0])
+	}
+}
+
+// When we limit we want the searches to be in order in order to match what FindAllIndex would do
+// as closely as possible
+func TestIndexAllIgnoreCaseLimitLargeNeedle(t *testing.T) {
+	matches := IndexAllIgnoreCase("Test TEST test tEST", "test", 2)
+
+	if len(matches) != 2 {
+		t.Error("Expected two matches")
+	}
+
+	if matches[0][0] != 0 {
+		t.Error("expected 0 got", matches[0][0])
+	}
+
+	if matches[1][0] != 5 {
+		t.Error("expected 5 got", matches[1][0])
+	}
+}
