@@ -229,10 +229,11 @@ func IndexAllIgnoreCase(haystack string, needle string, limit int) [][]int {
 		for _, term := range searchTerms {
 			potentialMatches := IndexAll(haystack, term, -1)
 
+			haystackRune := []rune(haystack)
 			for _, match := range potentialMatches {
 				// We have a potential match, so now see if it actually matches
 				// by getting the actual value out of our haystack
-				if len(haystack) < match[0]+len(needle) {
+				if len(haystackRune) < match[0]+len(needleRune) {
 					continue
 				}
 
@@ -242,8 +243,10 @@ func IndexAllIgnoreCase(haystack string, needle string, limit int) [][]int {
 				for match[0]+e > len(haystack) {
 					e--
 				}
+
 				// Cut off the number at the end to the number we need which is the length of the needle runes
 				toMatch := []rune(haystack[match[0] : match[0]+e])[:len(needleRune)]
+
 
 				// what we need to do is iterate the runes of the haystack portion we are trying to
 				// match and confirm that the same rune position is a actual match or case fold match
