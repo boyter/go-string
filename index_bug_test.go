@@ -29,7 +29,6 @@ print(i)#这里输出的结果虽然与print(str3)相同，但是性质是不同
 print('转换成二进制:',bin(i),'转换成八进制:',oct(i), '转换成十六进制:',hex(i))
 #二进制、八进制、十六进制这几个进制相互转换的时候，都要先转换为十进制int()`
 
-
 func TestIndexAllUnicodeOffset(t *testing.T) {
 	lines := strings.Split(strings.Replace(broken, "\r\n", "\n", -1), "\n")
 
