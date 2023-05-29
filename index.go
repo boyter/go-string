@@ -245,12 +245,13 @@ func IndexAllIgnoreCase(haystack string, needle string, limit int) [][]int {
 				}
 
 				// Cut off the number at the end to the number we need which is the length of the needle runes
-				var toMatch []rune
-				if match[0]+e > len(haystack) {
-					toMatch = []rune(haystack[match[0] : len(haystack)-1])[:len(needleRune)]
-				} else {
-					toMatch = []rune(haystack[match[0] : match[0]+e])[:len(needleRune)]
+				toMatchRune := []rune(haystack[match[0] : match[0]+e])
+				toMatchEnd := len(needleRune)
+				if len(toMatchRune) < len(needleRune) {
+					toMatchEnd = len(toMatchRune)
 				}
+
+				toMatch := toMatchRune[:toMatchEnd]
 
 				// old logic here
 				//toMatch = []rune(haystack[match[0] : match[0]+e])[:len(needleRune)]
