@@ -226,10 +226,11 @@ func IndexAllIgnoreCase(haystack string, needle string, limit int) [][]int {
 		// However after some investigation it turns out that this turns
 		// into a fancy  vector instruction on AMD64 (which is all we care about)
 		// and as such its pretty hard to beat.
+		haystackRune := []rune(haystack)
+		
 		for _, term := range searchTerms {
 			potentialMatches := IndexAll(haystack, term, -1)
 
-			haystackRune := []rune(haystack)
 			for _, match := range potentialMatches {
 				// We have a potential match, so now see if it actually matches
 				// by getting the actual value out of our haystack
