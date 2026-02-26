@@ -299,3 +299,86 @@ func TestIndexAllIgnoreCaseLimitLargeNeedle(t *testing.T) {
 		t.Error("expected 5 got", matches[1][0])
 	}
 }
+
+// Long needle (>3 runes) starting with multi-byte fold character ſ (U+017F, 2 bytes).
+// Needle "ſecrets" is 8 bytes (ſ=2 + ecrets=6), but should match "secrets" which is 7 bytes.
+// Validates that byte offsets in results reflect the haystack bytes, not needle bytes.
+func TestIndexAllIgnoreCaseLongNeedleMultiByteFoldStart(t *testing.T) {
+	// "the secrets are here" — "secrets" starts at byte 4
+	matches := IndexAllIgnoreCase("the secrets are here", "ſecrets", -1)
+
+	if len(matches) != 1 {
+		t.Errorf("Expected 1 match, got %d", len(matches))
+		return
+	}
+
+	if matches[0][0] != 4 {
+		t.Errorf("Expected start=4, got %d", matches[0][0])
+	}
+
+	// "secrets" in haystack is 7 bytes, so end should be 11
+	if matches[0][1] != 11 {
+		t.Errorf("Expected end=11, got %d", matches[0][1])
+	}
+}
+
+// Long needle with mixed multi-byte and single-byte fold characters.
+// Needle "sſsſs" is 5 runes (>3, takes long-needle path).
+// Each ſ is 2 bytes, so needle is 7 bytes total. Haystack "sssss" is all 1-byte.
+// Tests that pos += size correctly accumulates different-sized runes.
+func TestIndexAllIgnoreCaseLongNeedleMixedMultiByte(t *testing.T) {
+	matches := IndexAllIgnoreCase("sssss", "sſsſs", -1)
+
+	if len(matches) != 1 {
+		t.Errorf("Expected 1 match, got %d", len(matches))
+		return
+	}
+
+	if matches[0][0] != 0 {
+		t.Errorf("Expected start=0, got %d", matches[0][0])
+	}
+
+	// Haystack "sssss" is 5 bytes
+	if matches[0][1] != 5 {
+		t.Errorf("Expected end=5, got %d", matches[0][1])
+	}
+}
+
+// Long needle that is the entire haystack — exact match boundary test.
+// Needle "ſecret" (7 bytes, 6 runes) against haystack "ſecret" (7 bytes).
+// After verifying all runes, pos lands exactly at len(haystack).
+// Ensures the pos >= len(haystack) guard doesn't falsely reject.
+func TestIndexAllIgnoreCaseLongNeedleExactBoundary(t *testing.T) {
+	matches := IndexAllIgnoreCase("ſecret", "ſecret", -1)
+
+	if len(matches) != 1 {
+		t.Errorf("Expected 1 match, got %d", len(matches))
+		return
+	}
+
+	if matches[0][0] != 0 {
+		t.Errorf("Expected start=0, got %d", matches[0][0])
+	}
+
+	// "ſecret" is 7 bytes (ſ=2 + ecret=5)
+	if matches[0][1] != 7 {
+		t.Errorf("Expected end=7, got %d", matches[0][1])
+	}
+
+	// Also test cross-fold: haystack "secret" (6 bytes) should match needle "ſecret"
+	matches2 := IndexAllIgnoreCase("secret", "ſecret", -1)
+
+	if len(matches2) != 1 {
+		t.Errorf("Expected 1 match for cross-fold, got %d", len(matches2))
+		return
+	}
+
+	if matches2[0][0] != 0 {
+		t.Errorf("Expected start=0 for cross-fold, got %d", matches2[0][0])
+	}
+
+	// "secret" in haystack is 6 bytes
+	if matches2[0][1] != 6 {
+		t.Errorf("Expected end=6 for cross-fold, got %d", matches2[0][1])
+	}
+}
