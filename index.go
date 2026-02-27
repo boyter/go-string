@@ -110,6 +110,16 @@ var CacheSize = 10
 // faster (in some cases thousands of times) or just as fast. Of course it cannot
 // do regular expressions, but that's fine.
 //
+// Performance notes: IndexAllIgnoreCase is effectively memory-bandwidth-limited
+// for large haystacks. The permutation approach (2^min(len,3) passes of
+// strings.Index) is near-optimal because strings.Index compiles to SIMD
+// assembly. Attempts to reduce passes (2-char prefix with byte-level |0x20
+// verification) yielded only ~13% improvement on 1.87GB at the cost of
+// significant complexity. Single-pass approaches using strings.IndexByte
+// are slower due to poor selectivity (too many candidates per byte match).
+// Further gains would require assembly-level SIMD or parallelism, which
+// is out of scope for this library
+//
 // For pure literal searches IE no regular expression logic this method
 // is a drop in replacement for re.FindAllIndex but generally much faster.
 func IndexAllIgnoreCase(haystack string, needle string, limit int) [][]int {
