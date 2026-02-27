@@ -106,10 +106,10 @@ func init() {
 	}
 }
 
-// bestTrigramOffset returns the rune offset of the rarest trigram window
+// bestCharOffset returns the rune offset of the rarest character window
 // in needleRune. Scores each window by summing character rarity (lower = rarer).
 // Falls back to offset 0 if needle is shorter than width.
-func bestTrigramOffset(needleRune []rune, width int) int {
+func bestCharOffset(needleRune []rune, width int) int {
 	if len(needleRune) <= width {
 		return 0
 	}
@@ -254,17 +254,17 @@ func IndexAllIgnoreCase(haystack string, needle string, limit int) [][]int {
 		// cast things around to ensure it works
 		needleRune := []rune(needle)
 
-		trigramStart := bestTrigramOffset(needleRune, charLimit)
-		needleTrigram := string(needleRune[trigramStart : trigramStart+charLimit])
+		searchStart := bestCharOffset(needleRune, 1)
+		searchChar := string(needleRune[searchStart : searchStart+1])
 
 		_permuteCacheLock.Lock()
-		searchTerms, ok := _permuteCache[needleTrigram]
+		searchTerms, ok := _permuteCache[searchChar]
 		if !ok {
 			if len(_permuteCache) > CacheSize {
 				_permuteCache = map[string][]string{}
 			}
-			searchTerms = PermuteCaseFolding(needleTrigram)
-			_permuteCache[needleTrigram] = searchTerms
+			searchTerms = PermuteCaseFolding(searchChar)
+			_permuteCache[searchChar] = searchTerms
 		}
 		_permuteCacheLock.Unlock()
 
@@ -281,13 +281,13 @@ func IndexAllIgnoreCase(haystack string, needle string, limit int) [][]int {
 			potentialMatches := IndexAll(haystack, term, -1)
 
 			for _, match := range potentialMatches {
-				// Walk backward trigramStart runes in the haystack to find
+				// Walk backward searchStart runes in the haystack to find
 				// where the full needle would start. We must walk by runes
 				// because case-folded characters can have different byte widths
 				// (e.g. 'ſ' is 2 bytes but 's' is 1 byte).
 				needleStart := match[0]
 				skip := false
-				for k := 0; k < trigramStart; k++ {
+				for k := 0; k < searchStart; k++ {
 					if needleStart <= 0 {
 						skip = true
 						break
