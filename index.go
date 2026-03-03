@@ -7,8 +7,23 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"unicode"
 	"unicode/utf8"
 )
+
+// equalFold reports whether runes a and b are equal under Unicode case-folding.
+// It walks the SimpleFold chain without allocating (unlike AllSimpleFold).
+func equalFold(a, b rune) bool {
+	if a == b {
+		return true
+	}
+	for f := unicode.SimpleFold(a); f != a; f = unicode.SimpleFold(f) {
+		if f == b {
+			return true
+		}
+	}
+	return false
+}
 
 // IndexAll extracts all the locations of a string inside another string
 // up-to the defined limit and does so without regular expressions,
@@ -329,18 +344,9 @@ func IndexAllIgnoreCase(haystack string, needle string, limit int) [][]int {
 
 					r, size := utf8.DecodeRuneInString(haystack[pos:])
 
-					if r != needleRune[i] {
-						foldMatch := false
-						for _, f := range AllSimpleFold(r) {
-							if f == needleRune[i] {
-								foldMatch = true
-								break
-							}
-						}
-						if !foldMatch {
-							isMatch = false
-							break
-						}
+					if r != needleRune[i] && !equalFold(r, needleRune[i]) {
+						isMatch = false
+						break
 					}
 					pos += size
 				}
@@ -372,4 +378,108 @@ func IndexAllIgnoreCase(haystack string, needle string, limit int) [][]int {
 	}
 
 	return locs
+}
+
+// ContainsIgnoreCase reports whether needle exists in haystack under
+// case-insensitive (Unicode folding) comparison. It returns true on the
+// first match without collecting all locations, making it much cheaper
+// than len(IndexAllIgnoreCase(…)) > 0 for existence checks.
+func ContainsIgnoreCase(haystack string, needle string) bool {
+	if len(haystack) == 0 || len(needle) == 0 {
+		return false
+	}
+
+	var charLimit = 3
+
+	if utf8.RuneCountInString(needle) <= charLimit {
+		_permuteCacheLock.RLock()
+		searchTerms, ok := _permuteCache[needle]
+		_permuteCacheLock.RUnlock()
+
+		if !ok {
+			_permuteCacheLock.Lock()
+			searchTerms, ok = _permuteCache[needle]
+			if !ok {
+				if len(_permuteCache) > CacheSize {
+					_permuteCache = map[string][]string{}
+				}
+				searchTerms = PermuteCaseFolding(needle)
+				_permuteCache[needle] = searchTerms
+			}
+			_permuteCacheLock.Unlock()
+		}
+
+		for _, term := range searchTerms {
+			if strings.Contains(haystack, term) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Over the character limit: search for a single rare character, then verify
+	needleRune := []rune(needle)
+
+	searchStart := bestCharOffset(needleRune, 1)
+	searchChar := string(needleRune[searchStart : searchStart+1])
+
+	_permuteCacheLock.RLock()
+	searchTerms, ok := _permuteCache[searchChar]
+	_permuteCacheLock.RUnlock()
+
+	if !ok {
+		_permuteCacheLock.Lock()
+		searchTerms, ok = _permuteCache[searchChar]
+		if !ok {
+			if len(_permuteCache) > CacheSize {
+				_permuteCache = map[string][]string{}
+			}
+			searchTerms = PermuteCaseFolding(searchChar)
+			_permuteCache[searchChar] = searchTerms
+		}
+		_permuteCacheLock.Unlock()
+	}
+
+	for _, term := range searchTerms {
+		potentialMatches := IndexAll(haystack, term, -1)
+
+		for _, match := range potentialMatches {
+			needleStart := match[0]
+			skip := false
+			for j := 0; j < searchStart; j++ {
+				if needleStart <= 0 {
+					skip = true
+					break
+				}
+				_, size := utf8.DecodeLastRuneInString(haystack[:needleStart])
+				needleStart -= size
+			}
+			if skip {
+				continue
+			}
+			pos := needleStart
+			isMatch := true
+
+			for i := 0; i < len(needleRune); i++ {
+				if pos >= len(haystack) {
+					isMatch = false
+					break
+				}
+
+				r, size := utf8.DecodeRuneInString(haystack[pos:])
+
+				if r != needleRune[i] && !equalFold(r, needleRune[i]) {
+					isMatch = false
+					break
+				}
+				pos += size
+			}
+
+			if isMatch {
+				return true
+			}
+		}
+	}
+
+	return false
 }
