@@ -102,9 +102,7 @@ The other most useful method is HighlightString. HighlightString takes in some c
 strings which can be used for highlighting around matching terms. For example you could pass in `"test"` and have it return `"<strong>te</strong>st"`.
 The argument locations accepts output from regexp.FindAllIndex or the included `IndexAllIgnoreCase` or `IndexAll`.
 
-All code is dual-licenced as either MIT or Unlicence. Your choice when you use it.
-
-Note that as an Australian I cannot put this into the public domain, hence the choice most liberal licences I can find.
+All code is licenced under the MIT licence.
 
 ### Third-Party Code
 
