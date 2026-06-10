@@ -1,0 +1,6 @@
+github.com/boyter/gocodewalker v1.5.1 h1:0YeK2QAkd+ymW5MsagMZapIXD3v9/vrZl0HkFSLpKsw=
+github.com/boyter/gocodewalker v1.5.1/go.mod h1:9k+yM6+fIx61F0xI9ChXEGE5DYoLhggw8AxSOtW+kKo=
+github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 h1:y5HC9v93H5EPKqaS1UYVg1uYah5Xf51mBfIoWehClUQ=
+github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964/go.mod h1:Xd9hchkHSWYkEqJwUGisez3G1QY8Ryz0sdWrLPMGjLk=
+golang.org/x/sync v0.12.0 h1:MHc5BpPuC30uJk597Ri8TV3CNZcTLu6B6z4lJy+g6Jw=
+golang.org/x/sync v0.12.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=

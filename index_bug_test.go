@@ -1,6 +1,8 @@
 package str
 
 import (
+	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -35,5 +37,81 @@ func TestIndexAllUnicodeOffset(t *testing.T) {
 	// this has an exception
 	for _, l := range lines {
 		IndexAllIgnoreCase(l, "list1=[0,1,2,3,4,5,6,7,8,9]#制作一个0", -1)
+	}
+}
+
+// The KELVIN SIGN (U+212A) case-folds to 'k'/'K'. When a needle contains two
+// (or more) runes that each fold to a non-ASCII form, IndexAllIgnoreCase must
+// still find a haystack where several of those positions appear in their folded
+// form simultaneously. PermuteCaseFolding used to fold only one position at a
+// time, so "kk" never produced the double KELVIN SIGN permutation and a haystack
+// of "KK" (two KELVIN SIGNs) was missed. We verify against regexp's documented
+// case-insensitive behaviour, which IndexAllIgnoreCase is a drop-in for.
+func TestIndexAllIgnoreCaseKelvin(t *testing.T) {
+	const kelvin = "K" // KELVIN SIGN, folds to k/K
+	const longS = "ſ"  // LATIN SMALL LETTER LONG S, folds to s/S
+
+	cases := []struct {
+		haystack string
+		needle   string
+	}{
+		{kelvin + kelvin, "kk"},               // two folded runes adjacent
+		{kelvin + "e" + kelvin, "kek"},        // folded runes either side of a plain one
+		{longS + longS, "ss"},                 // same class of bug via long-s
+		{"a" + kelvin + kelvin + "b", "akkb"}, // embedded in a longer (short-path) needle
+	}
+
+	for _, c := range cases {
+		got := IndexAllIgnoreCase(c.haystack, c.needle, -1)
+		want := regexp.MustCompile("(?i)"+regexp.QuoteMeta(c.needle)).FindAllIndex([]byte(c.haystack), -1)
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("IndexAllIgnoreCase(%q, %q) = %v, want %v", c.haystack, c.needle, got, want)
+		}
+	}
+}
+
+// PermuteCaseFolding must enumerate the full cross-product of each rune's fold
+// equivalents, not just one position at a time, otherwise multi-position folds
+// (e.g. both characters of "kk" appearing as the KELVIN SIGN) are never produced.
+func TestPermuteCaseFoldingCrossProduct(t *testing.T) {
+	const kelvin = "K"
+	folded := PermuteCaseFolding("kk")
+	if !Contains(folded, kelvin+kelvin) {
+		t.Errorf("PermuteCaseFolding(\"kk\") = %q, missing double KELVIN SIGN %q", folded, kelvin+kelvin)
+	}
+}
+
+// 's' and 'k' fold to a non-ASCII third form, so the two-byte indexByteTwo SIMD
+// scan cannot be used when one of them is the anchor. bestCharOffset must
+// therefore never prefer them over a SIMD-capable letter, otherwise needles
+// like "kelvin" (where 'k' is the rarest letter by English frequency) silently
+// fall back to the slow multi-pass scan. This guards the rarity-table override.
+func TestAnchorAvoidsNonSIMDLetters(t *testing.T) {
+	// A char is SIMD-capable iff it has exactly two single-byte fold variants.
+	simdCapable := func(r rune) bool {
+		f := PermuteCaseFolding(string(r))
+		return len(f) == 2 && len(f[0]) == 1 && len(f[1]) == 1
+	}
+
+	for _, needle := range []string{"kelvin", "session", "skunk", "book", "ask", "kiss"} {
+		runes := []rune(needle)
+
+		// If the needle contains any SIMD-capable letter, the chosen anchor
+		// must be one (i.e. it must not land on 's'/'k').
+		hasCapable := false
+		for _, r := range runes {
+			if simdCapable(r) {
+				hasCapable = true
+				break
+			}
+		}
+		if !hasCapable {
+			continue
+		}
+
+		anchor := runes[bestCharOffset(runes, 1)]
+		if !simdCapable(anchor) {
+			t.Errorf("needle %q selected non-SIMD anchor %q; expected a SIMD-capable letter", needle, string(anchor))
+		}
 	}
 }

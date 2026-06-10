@@ -99,7 +99,17 @@ func init() {
 	for i := range _charRarity {
 		_charRarity[i] = 100
 	}
-	order := "zjqxkvbpygfwmucldrhsnioate"
+	// 's' and 'k' are deliberately omitted from this ordering. They are the only
+	// ASCII letters that case-fold to a third, non-ASCII form ('ſ' U+017F and the
+	// KELVIN SIGN 'K' U+212A), giving them three fold variants, so the fast
+	// two-byte indexByteTwo SIMD scan in IndexAllIgnoreCase cannot be used when
+	// they are the anchor. By English frequency 'k' is rare and would otherwise
+	// be the preferred anchor for any needle containing it (e.g. "kelvin"),
+	// forcing the slow multi-pass fallback. Leaving them at the common default
+	// (100) keeps bestCharOffset from preferring them, so such needles anchor on
+	// a SIMD-capable letter instead. If a needle contains no other letter we
+	// still anchor on them and the slower unicode-aware fallback handles it.
+	order := "zjqxvbpygfwmucldrhnioate"
 	for i, ch := range order {
 		_charRarity[ch] = i
 		if ch >= 'a' && ch <= 'z' {
@@ -294,8 +304,11 @@ func IndexAllIgnoreCase(haystack string, needle string, limit int) [][]int {
 		// two fold variants (upper + lower), use indexByteTwo to find both in
 		// a single SIMD pass instead of two separate IndexAll scans.
 		// This covers all ASCII letters except s/S (which also fold to ſ)
-		// and k/K (which also fold to K). Since bestCharOffset picks the
-		// rarest character, those are unlikely to be selected anyway.
+		// and k/K (which also fold to K); those have three fold variants so
+		// the len == 2 guard below excludes them. The rarity table (see init)
+		// omits s and k so bestCharOffset avoids anchoring on them whenever the
+		// needle has a SIMD-capable letter, keeping needles like "kelvin" on
+		// this fast path.
 		searchRune := needleRune[searchStart]
 		useSIMD := len(searchTerms) == 2 && len(searchTerms[0]) == 1 && len(searchTerms[1]) == 1 &&
 			searchRune < utf8.RuneSelf &&
