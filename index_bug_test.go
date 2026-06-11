@@ -115,3 +115,59 @@ func TestAnchorAvoidsNonSIMDLetters(t *testing.T) {
 		}
 	}
 }
+
+// The case-fold search runs each permutation independently and concatenates the
+// hits, which can leave them out of order or overlapping. IndexAllIgnoreCase is
+// documented as a drop-in for regexp.FindAllIndex, which returns matches
+// left-to-right and non-overlapping, so the results must match exactly.
+func TestIndexAllIgnoreCaseOrderingAndOverlap(t *testing.T) {
+	cases := []struct {
+		haystack string
+		needle   string
+	}{
+		{"eKnk", "k"},   // ordering: 'k' at [1,2] found after KELVIN at [3,4]
+		{"aAa", "aa"},   // overlap, pure ASCII: [0,2] and [1,3]
+		{"ssſ", "ss"},   // overlap via the long-s fold (different byte lengths)
+		{"KkK", "kk"},   // overlap across KELVIN SIGN folds
+		{"sSsSs", "ss"}, // multiple overlapping candidates
+	}
+
+	for _, c := range cases {
+		got := IndexAllIgnoreCase(c.haystack, c.needle, -1)
+		want := regexp.MustCompile("(?i)"+regexp.QuoteMeta(c.needle)).FindAllIndex([]byte(c.haystack), -1)
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("IndexAllIgnoreCase(%q, %q, -1) = %v, want %v", c.haystack, c.needle, got, want)
+		}
+	}
+}
+
+// Fuzz the short (case-folded) path against regexp.FindAllIndex over an alphabet
+// rich in case variants and multi-byte folds, for both unlimited and limited
+// searches. Before the ordering/overlap fix this produced thousands of mismatches.
+func TestIndexAllIgnoreCaseMatchesRegexp(t *testing.T) {
+	alphabet := []rune{'k', 'K', 'K', 's', 'S', 'ſ', '.', '-', ' ', 'e', 'a', 'b', 'o', 't'}
+	needles := []string{"k", "s", "kk", "ss", "sk", "ks", "te", "aa", "s.k", "ass"}
+
+	// Deterministic LCG so the test needs no imports beyond the stdlib already used.
+	seed := uint64(0x9e3779b97f4a7c15)
+	next := func(n int) int {
+		seed = seed*6364136223846793005 + 1442695040888963407
+		return int((seed >> 33) % uint64(n))
+	}
+
+	for i := 0; i < 200000; i++ {
+		hr := make([]rune, 1+next(12))
+		for j := range hr {
+			hr[j] = alphabet[next(len(alphabet))]
+		}
+		haystack := string(hr)
+		needle := needles[next(len(needles))]
+		limit := []int{-1, 0, 1, 3}[next(4)] // 0 must return none, matching FindAllIndex
+
+		got := IndexAllIgnoreCase(haystack, needle, limit)
+		want := regexp.MustCompile("(?i)"+regexp.QuoteMeta(needle)).FindAllIndex([]byte(haystack), limit)
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("mismatch haystack=%q needle=%q limit=%d\n got=%v\nwant=%v", haystack, needle, limit, got, want)
+		}
+	}
+}
