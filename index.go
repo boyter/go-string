@@ -341,18 +341,9 @@ func IndexAllIgnoreCase(haystack string, needle string, limit int) [][]int {
 
 						r, size := utf8.DecodeRuneInString(haystack[pos:])
 
-						if r != needleRune[i] {
-							foldMatch := false
-							for _, f := range AllSimpleFold(r) {
-								if f == needleRune[i] {
-									foldMatch = true
-									break
-								}
-							}
-							if !foldMatch {
-								isMatch = false
-								break
-							}
+						if r != needleRune[i] && !foldEqual(r, needleRune[i]) {
+							isMatch = false
+							break
 						}
 						pos += size
 					}
@@ -394,18 +385,9 @@ func IndexAllIgnoreCase(haystack string, needle string, limit int) [][]int {
 
 						r, size := utf8.DecodeRuneInString(haystack[pos:])
 
-						if r != needleRune[i] {
-							foldMatch := false
-							for _, f := range AllSimpleFold(r) {
-								if f == needleRune[i] {
-									foldMatch = true
-									break
-								}
-							}
-							if !foldMatch {
-								isMatch = false
-								break
-							}
+						if r != needleRune[i] && !foldEqual(r, needleRune[i]) {
+							isMatch = false
+							break
 						}
 						pos += size
 					}
@@ -537,4 +519,28 @@ func sortAndDedupe(locs [][]int) [][]int {
 	}
 
 	return locs[:n]
+}
+
+// foldEqual reports whether r and n are equal under Unicode simple case
+// folding, without allocating. ASCII is plain arithmetic; everything else
+// walks the unicode.SimpleFold orbit in place.
+func foldEqual(r, n rune) bool {
+	if r == n {
+		return true
+	}
+	if r < utf8.RuneSelf && n < utf8.RuneSelf {
+		if 'A' <= r && r <= 'Z' {
+			r += 'a' - 'A'
+		}
+		if 'A' <= n && n <= 'Z' {
+			n += 'a' - 'A'
+		}
+		return r == n && 'a' <= r && r <= 'z'
+	}
+	for f := unicode.SimpleFold(r); f != r; f = unicode.SimpleFold(f) {
+		if f == n {
+			return true
+		}
+	}
+	return false
 }
