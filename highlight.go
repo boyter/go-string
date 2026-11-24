@@ -4,6 +4,7 @@ package str
 
 import (
 	"strings"
+	"unicode/utf8"
 )
 
 // HighlightString takes in some content and locations and then inserts in/out
@@ -68,9 +69,10 @@ func HighlightString(content string, locations [][]int, in string, out string) s
 
 		str.WriteString(string(x))
 
-		// If at the end, and its not -1 meaning the first char
-		// which should never happen (I hope!) then write the end str
-		if i == end && end != -1 {
+		// The match can end inside a multibyte rune, so close it after
+		// writing that rune rather than waiting for another iteration.
+		_, size := utf8.DecodeRuneInString(content[i:])
+		if i <= end && end < i+size {
 			str.WriteString(out)
 			end = 0
 		}

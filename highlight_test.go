@@ -19,6 +19,47 @@ func TestHighlightStringSimple(t *testing.T) {
 	}
 }
 
+func TestHighlightStringUnicode(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		pattern  string
+		expected string
+	}{
+		{"two-byte ending", "café", "é", "caf[é]"},
+		{"three-byte ending", "a猫", "猫", "a[猫]"},
+		{"four-byte ending", "a🙂", "🙂", "a[🙂]"},
+		{"adjacent Unicode matches", "é猫🙂", ".", "[é][猫][🙂]"},
+		{"adjacent Unicode and ASCII matches", "éa", ".", "[é][a]"},
+		{"separated Unicode matches", "é 猫 🙂", `\S`, "[é] [猫] [🙂]"},
+		{"unhighlighted suffix", "café!", "é", "caf[é]!"},
+		{"replacement rune", "\ufffd", ".", "[\ufffd]"},
+		{"invalid byte within match", "\xffab", "..", "[\ufffda]b"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			locations := regexp.MustCompile(tt.pattern).FindAllIndex([]byte(tt.content), -1)
+			got := HighlightString(tt.content, locations, "[", "]")
+			if got != tt.expected {
+				t.Errorf("HighlightString(%q, %v) = %q; want %q", tt.content, locations, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestHighlightStringUnicodeOverlap(t *testing.T) {
+	content := "é猫🙂"
+	var locations [][]int
+	for _, pattern := range []string{"é猫", "猫🙂"} {
+		locations = append(locations, regexp.MustCompile(pattern).FindAllIndex([]byte(content), -1)...)
+	}
+	got := HighlightString(content, locations, "[", "]")
+	if expected := "[é猫🙂]"; got != expected {
+		t.Errorf("HighlightString(%q, %v) = %q; want %q", content, locations, got, expected)
+	}
+}
+
 func TestHighlightStringCheckInOut(t *testing.T) {
 	loc := [][]int{}
 	loc = append(loc, []int{0, 4})
